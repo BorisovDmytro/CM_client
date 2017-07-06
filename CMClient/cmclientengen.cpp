@@ -2,7 +2,7 @@
 
 #include <QDebug>
 #include <QDataStream>
-
+#include <QAudioDeviceInfo>
 
 
 CMClientEngene::CMClientEngene(QObject *parent) : QObject(parent)
@@ -15,8 +15,12 @@ CMClientEngene::CMClientEngene(QObject *parent) : QObject(parent)
 void CMClientEngene::initialize()
 {
   QAudioEncoderSettings setting;
-  setting.setCodec("audio/PCM");
+  setting.setCodec("audio/aac");
   setting.setQuality(QMultimedia::HighQuality);
+
+  qDebug() << "AUDIO OPTINS";
+  qDebug() << setting.channelCount();
+  qDebug() << setting.sampleRate();
 
   mAudioRecord = new QAudioRecorder(this);
   mAudioRecord->setEncodingSettings(setting);
@@ -28,10 +32,14 @@ void CMClientEngene::initialize()
   foreach (QString input, inputs) {
       QString description = mAudioRecord->audioInputDescription(input);
       selectedInput = input;
-      qDebug() << selectedInput << description << "\n";
+      qDebug() << selectedInput << description;
     }
 
+  QAudioDeviceInfo qauid;
+
   qDebug () << "Support codec" << mAudioRecord->supportedAudioCodecs();
+  qDebug () << "Support codec" << qauid.supportedCodecs();
+
 
   mAudioRecord->setAudioInput(selectedInput);
   mProbe->setSource(mAudioRecord);
@@ -78,7 +86,6 @@ void CMClientEngene::canselCall()
 
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
-  //mSocket->write(arr);
   sendData(arr);
 }
 
@@ -93,7 +100,6 @@ void CMClientEngene::startCall(const QString &recipient)
   out << (int) StartCall;
   out << recipient;
   sendData(arr);
-  // mSocket->write(arr);
 }
 
 void CMClientEngene::endCall()
@@ -111,7 +117,6 @@ void CMClientEngene::endCall()
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
   sendData(arr);
-  //mSocket->write(arr);
 }
 
 void CMClientEngene::connectToHost(QString host, int port)
@@ -139,16 +144,12 @@ void CMClientEngene::finilize()
   if (!mSocket)
     return;
 
-  /* if (mSocket->isOpen())
-    mSocket->close();*/
-
   if (mAccount)
     delete mAccount;
 }
 
 void CMClientEngene::loadAccountList()
 {
-  qDebug() << "loadAccountList";
   QByteArray  arr;
   QDataStream out(&arr, QIODevice::WriteOnly);
   out.setVersion(QT_Version);
@@ -161,7 +162,6 @@ void CMClientEngene::loadAccountList()
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
   sendData(arr);
-  //mSocket->write(arrBlock);
 }
 
 void CMClientEngene::offMicro() {
@@ -178,19 +178,15 @@ void CMClientEngene::readCallFrame(QDataStream &stream)
   stream >> voiceFrameIndex;
   stream >> lengthExpected;
 
-  qDebug() << "readCallFrame" << mExpectedVoiceFrameIndex << " " << voiceFrameIndex;
   if (mExpectedVoiceFrameIndex <= voiceFrameIndex) {
       stream.readBytes(data, lengthRead);
-      qDebug() << "LengthRead: " << lengthRead << " " << lengthExpected;
       if (lengthRead > 0)
         playAudio(data, lengthExpected);
     } else {
       stream.readBytes(data, lengthRead);
-      qDebug () << "old frame" << lengthRead;
     }
 
   mExpectedVoiceFrameIndex = voiceFrameIndex++;
-
 }
 
 void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
@@ -214,18 +210,15 @@ void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
   out << quint16(arr.size() - sizeof(quint16));
   mLastVoiceFrameIndex ++;
   sendData(arr);
-  //mSocket->write(arrBlock);
 }
 
 void CMClientEngene::connected()
 {
-  qDebug() << "Conenct done";
-  emit connectedDone();
+  emit connectToHostResualt(true);
 }
 
 void CMClientEngene::readyRead()
 {
-  qDebug() << "CMClientEngene readyRead:" << mSocket->bytesAvailable();
   QDataStream stream(mSocket);
   stream.setVersion(QT_Version);
 
@@ -238,7 +231,6 @@ void CMClientEngene::readyRead()
                 break;
               }
             stream >> m_nNextBlockSize;
-            qDebug() << "NextBlockSize:" << m_nNextBlockSize;
           }
 
          if (mSocket->bytesAvailable() < m_nNextBlockSize) {
@@ -247,10 +239,8 @@ void CMClientEngene::readyRead()
 
         m_nNextBlockSize = 0;
         stream >> type;
-        qDebug () << "Type" << type;
         switch (type) {
           case CallFrame: {
-              qDebug() << "CallFrame";
               readCallFrame(stream);
             } break;
           case Auth: {
@@ -324,20 +314,10 @@ void CMClientEngene::readyRead()
 void CMClientEngene::slotError(QAbstractSocket::SocketError err)
 {
   qDebug() << "Socket error :" << mSocket->errorString();
+  emit connectToHostResualt(false);
 }
-/*
-    QByteArray  arrBlock;
-    QDataStream out(&arrBlock, QIODevice::WriteOnly);
-    out.setVersion(QDataStream::Qt_4_2);
-    out << quint16(0) << QTime::currentTime() << str;
 
-    out.device()->seek(0);
-    out << quint16(arrBlock.size() - sizeof(quint16));
-
-    pSocket->write(arrBlock);
-*/
 void CMClientEngene::sendData(QByteArray &arr) {
-  qDebug() << "send bytes" << arr.size();
   mSocket->write(arr);
 }
 

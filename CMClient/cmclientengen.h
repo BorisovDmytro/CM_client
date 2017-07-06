@@ -53,10 +53,7 @@ private slots:
   void connected();
   void readyRead();
   void slotError(QAbstractSocket::SocketError err);
-
-
   void sendData(QByteArray &arr);
-
 
 signals:
   /**
@@ -64,7 +61,7 @@ signals:
   void error(QString msg);
   void newTextMessage(QString recipient, QString autor, QString message, QString date, QString time);
   void authResualt(bool isSuccess);
-  void connectedDone();
+  void connectToHostResualt(bool isConnected);
   void accountList(QStringList list);
   void signalSuccessCall(QString from);
   void signalCanselCall(QString from);
