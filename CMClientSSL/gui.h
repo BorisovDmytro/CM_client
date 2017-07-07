@@ -37,8 +37,6 @@ private slots:
 
   void onLaodAccounts(QStringList list);
 
-  void onListwidgetItemclicked(QListWidgetItem *item);
-
   void onNewMessage(QString recipient, QString autor, QString message, QString date, QString time);
 
   void onBntsendClicked();
@@ -52,7 +50,12 @@ private slots:
   void onStartCall(QString from);
 
   void onEndCall();
+
   void on_btnCallCansel_clicked();
+
+  void on_listWidget_itemClicked(QListWidgetItem *item);
+
+  void on_actionshow_settings_triggered();
 
 private:
   Ui::GUI *ui;

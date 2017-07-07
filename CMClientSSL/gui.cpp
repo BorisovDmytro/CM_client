@@ -2,12 +2,16 @@
 #include "ui_gui.h"
 
 #include <QMessageBox>
+#include "dialogcall.h"
+#include "dialogsettings.h"
 
 GUI::GUI(QWidget *parent) :
   QMainWindow(parent),
   ui(new Ui::GUI)
 {
   ui->setupUi(this);
+  ui->btnCallCansel->setVisible(false);
+
   ui->wConnectSetting->setVisible(false);
 
   connect(&engen, SIGNAL(authResualt(bool)),
@@ -44,7 +48,7 @@ GUI::GUI(QWidget *parent) :
           this,        SLOT(onBntsendClicked()));
 
   connect(ui->btn_call, SIGNAL(clicked(bool)),
-          this        , SLOT(onBtnconnectClicked()));
+          this        , SLOT(onBtnCallClicked()));
 
   connect(ui->btnCallCansel, SIGNAL(clicked(bool)),
           this,              SLOT(on_btnCallCansel_clicked()));
@@ -101,17 +105,6 @@ void GUI::onLaodAccounts(QStringList list)
     }
 }
 
-void GUI::onListwidgetItemclicked(QListWidgetItem *item)
-{
-  selectedUser = item->text();
-  ui->label_slect_account->setText(selectedUser);
-  StoragePtr storage = history.value(selectedUser, NULL);
-
-  ui->textEdit->clear();
-  foreach (MessageInformation var, *storage) {
-      ui->textEdit->append(var.getMessage());
-    }
-}
 
 void GUI::onNewMessage(QString recipient, QString autor, QString message, QString date, QString time)
 {
@@ -136,6 +129,7 @@ void GUI::onBntsendClicked()
 
 void GUI::onBtnCallClicked()
 {
+  qDebug() << "void GUI::onBtnCallClicked()";
   ui->btn_call->setVisible(false);
   ui->btnCallCansel->setVisible(true);
   engen.startCall(selectedUser);
@@ -143,22 +137,29 @@ void GUI::onBtnCallClicked()
 
 void GUI::onSuccessCall(QString from)
 {
-
+  ui->textEdit->append("Start call " + from);
 }
 
 void GUI::onCanselCall(QString from)
 {
-
+    ui->textEdit->append("Call cansel " + from);
 }
 
 void GUI::onStartCall(QString from)
 {
-
+  qDebug() << "onStartCall";
+  DialogCall dlg(this);
+  dlg.setFrom(from);
+  if (dlg.exec() == DialogCall::Accepted) {
+      engen.successCall();
+    } else {
+       engen.canselCall();
+    }
 }
 
 void GUI::onEndCall()
 {
-
+  ui->textEdit->append("Call end");
 }
 
 void GUI::on_btnCallCansel_clicked()
@@ -166,4 +167,26 @@ void GUI::on_btnCallCansel_clicked()
   ui->btn_call->setVisible(true);
   ui->btnCallCansel->setVisible(false);
   engen.canselCall();
+}
+
+void GUI::on_listWidget_itemClicked(QListWidgetItem *item)
+{
+  selectedUser = item->text();
+  ui->label_slect_account->setText(selectedUser);
+  StoragePtr storage = history.value(selectedUser, NULL);
+
+  ui->textEdit->clear();
+  foreach (MessageInformation var, *storage) {
+      ui->textEdit->append(var.getMessage());
+    }
+}
+
+void GUI::on_actionshow_settings_triggered()
+{
+  DialogSettings dlg(this);
+  dlg.setInputs(engen.getAudioInputsDevices());
+
+  if (dlg.exec() == DialogSettings::Accepted) {
+      engen.setAudioInput(dlg.getInput());
+    }
 }

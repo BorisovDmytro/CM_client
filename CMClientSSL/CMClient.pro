@@ -31,7 +31,8 @@ SOURCES += main.cpp\
     threadrecord.cpp \
     gui.cpp \
     dialogcall.cpp \
-    aes/aes256.cpp
+    aes/aes256.cpp \
+    dialogsettings.cpp
 
 HEADERS  += mainwindow.h \
     messageinformation.h \
@@ -40,11 +41,13 @@ HEADERS  += mainwindow.h \
     threadrecord.h \
     gui.h \
     dialogcall.h \
-    aes/aes256.hpp
+    aes/aes256.hpp \
+    dialogsettings.h
 
 FORMS    += mainwindow.ui \
     gui.ui \
-    dialogcall.ui
+    dialogcall.ui \
+    dialogsettings.ui
 
 RESOURCES += \
     res.qrc

@@ -25,6 +25,8 @@ private:
   QWebSocket     *mSocket;
   Account        *mAccount;
 
+  QStringList    mAudioInputsDevices;
+
   quint64 mLastVoiceFrameIndex;
   quint64 mExpectedVoiceFrameIndex;
   quint16 m_nNextBlockSize;
@@ -82,6 +84,8 @@ public slots:
   void finilize();
   void loadAccountList();
   void offMicro();
+  QStringList getAudioInputsDevices();
+  void setAudioInput(const QString &input);
 
 };
 

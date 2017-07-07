@@ -15,6 +15,12 @@ public:
   explicit DialogCall(QWidget *parent = 0);
   ~DialogCall();
 
+  void setFrom(const QString& name);
+private slots:
+  void on_btn_success_clicked();
+
+  void on_btn_cansel_clicked();
+
 private:
   Ui::DialogCall *ui;
 };

@@ -27,9 +27,9 @@ void CMClientEngene::initialize()
 
   mProbe = new QAudioProbe(this);
 
-  QStringList inputs = mAudioRecord->audioInputs();
+  mAudioInputsDevices = mAudioRecord->audioInputs();
   QString selectedInput;
-  foreach (QString input, inputs) {
+  foreach (QString input, mAudioInputsDevices) {
       QString description = mAudioRecord->audioInputDescription(input);
       selectedInput = input;
       qDebug() << selectedInput << description;
@@ -91,7 +91,7 @@ void CMClientEngene::canselCall()
 
 void CMClientEngene::startCall(const QString &recipient)
 {
-  qDebug () << "Start record";
+  qDebug () << "Start record " << recipient;
 
   QByteArray  arr;
   QDataStream out(&arr, QIODevice::WriteOnly);
@@ -170,6 +170,16 @@ void CMClientEngene::loadAccountList()
 
 void CMClientEngene::offMicro() {
   mAudioRecord->stop();
+}
+
+QStringList CMClientEngene::getAudioInputsDevices()
+{
+  return mAudioInputsDevices;
+}
+
+void CMClientEngene::setAudioInput(const QString &input)
+{
+  mAudioRecord->setAudioInput(input);
 }
 
 void CMClientEngene::readCallFrame(QDataStream &stream)
@@ -286,7 +296,7 @@ void CMClientEngene::readyRead(QByteArray in)
       case StartCall: {
           QString fromName;
           stream >> fromName;
-
+          qDebug() << "StartCall call";
           emit signalStartCall(fromName);
         } break;
       case SuccessCall: {
