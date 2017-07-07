@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QDataStream>
 #include <QAudioDeviceInfo>
-
+#include "aes/aes256.hpp"
 
 CMClientEngene::CMClientEngene(QObject *parent) : QObject(parent)
 {
@@ -184,8 +184,15 @@ void CMClientEngene::readCallFrame(QDataStream &stream)
 
   if (mExpectedVoiceFrameIndex <= voiceFrameIndex) {
       stream.readBytes(data, lengthRead);
+
+      std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+                                           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };
+
+      ByteArray dec;
+      Aes256::decrypt(key, (unsigned char*) data, lengthRead, dec);
+
       if (lengthRead > 0)
-        playAudio(data, lengthExpected);
+        playAudio((const char *)dec.data(), dec.size());
     } else {
       stream.readBytes(data, lengthRead);
     }
@@ -199,6 +206,10 @@ void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
   if (count == 0)
     return;
 
+  std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+                                       0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };
+
+
   QByteArray  arr;
   QDataStream out(&arr, QIODevice::WriteOnly);
   out.setVersion(QT_Version);
@@ -209,7 +220,10 @@ void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
   out << mLastVoiceFrameIndex;
   out << count;
 
-  out.writeBytes((const char*)buffer.data(), count);
+  ByteArray enc;
+  Aes256::encrypt(key, (unsigned char*)buffer.data(), count, enc);
+
+  out.writeBytes((const char*)enc.data(), enc.size());
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
   mLastVoiceFrameIndex ++;

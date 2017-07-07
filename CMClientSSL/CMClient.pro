@@ -30,7 +30,8 @@ SOURCES += main.cpp\
     account.cpp \
     threadrecord.cpp \
     gui.cpp \
-    dialogcall.cpp
+    dialogcall.cpp \
+    aes/aes256.cpp
 
 HEADERS  += mainwindow.h \
     messageinformation.h \
@@ -38,7 +39,8 @@ HEADERS  += mainwindow.h \
     account.h \
     threadrecord.h \
     gui.h \
-    dialogcall.h
+    dialogcall.h \
+    aes/aes256.hpp
 
 FORMS    += mainwindow.ui \
     gui.ui \
