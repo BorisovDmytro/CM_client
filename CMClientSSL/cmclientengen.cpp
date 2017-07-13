@@ -67,6 +67,7 @@ void CMClientEngene::successCall()
   out << quint16(0);
 
   out << (int) SuccessCall;
+  out << (qint64)mKey.getPrivate();
 
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
@@ -99,6 +100,13 @@ void CMClientEngene::startCall(const QString &recipient)
 
   out << (int) StartCall;
   out << recipient;
+
+  mKey = DiffHelmanProtocol(true);
+
+  out << (qint64)mKey.getGenerator(); // long
+  out << (qint64)mKey.getModule(); // long
+  out << (qint64)mKey.getPrivate(); // long
+
   sendData(arr);
 }
 
@@ -295,15 +303,30 @@ void CMClientEngene::readyRead(QByteArray in)
         } break;
       case StartCall: {
           QString fromName;
+          qint64 gen  = 0;
+          qint64 mod  = 0;
+          qint64 priv = 0;
           stream >> fromName;
-          qDebug() << "StartCall call";
+
+          stream >> gen;
+          stream >> mod;
+          stream >> priv;
+
+          mKey = DiffHelmanProtocol(false);
+          mKey.set(gen, mod);
+          mKey.setPublic(priv);
+
+          qDebug() << "StartCall call: " << mKey.getKey();
           emit signalStartCall(fromName);
         } break;
       case SuccessCall: {
-          qDebug() << "success call";
           QString fromName;
+          qint64 priv = 0;
           stream >> fromName;
+          stream >> priv;
 
+          mKey.setPublic(priv);
+          qDebug() << "success call: " << mKey.getKey();
           mLastVoiceFrameIndex     = 0;
           mExpectedVoiceFrameIndex = 0;
           mAudioRecord->record();

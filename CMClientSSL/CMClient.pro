@@ -32,7 +32,8 @@ SOURCES += main.cpp\
     gui.cpp \
     dialogcall.cpp \
     aes/aes256.cpp \
-    dialogsettings.cpp
+    dialogsettings.cpp \
+    crypto/diffhelmanprotocol.cpp
 
 HEADERS  += mainwindow.h \
     messageinformation.h \
@@ -42,7 +43,8 @@ HEADERS  += mainwindow.h \
     gui.h \
     dialogcall.h \
     aes/aes256.hpp \
-    dialogsettings.h
+    dialogsettings.h \
+    crypto/diffhelmanprotocol.h
 
 FORMS    += mainwindow.ui \
     gui.ui \

@@ -12,6 +12,7 @@
 
 #include "messageinformation.h"
 #include "account.h"
+#include "crypto/diffhelmanprotocol.h"
 
 class CMClientEngene : public QObject
 {
@@ -30,6 +31,7 @@ private:
   quint64 mLastVoiceFrameIndex;
   quint64 mExpectedVoiceFrameIndex;
   quint16 m_nNextBlockSize;
+  DiffHelmanProtocol mKey;
   void playAudio(const char* data, int size);
 public:
   enum MessageType {
