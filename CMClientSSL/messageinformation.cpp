@@ -1,4 +1,5 @@
 #include "messageinformation.h"
+#include <QDebug>
 
 QString MessageInformation::getRecipient() const
 {
@@ -15,7 +16,7 @@ MessageInformation::MessageInformation()
 
 }
 
-MessageInformation::MessageInformation(QString recipient, QString autor, QString message, QDate date, QTime time)
+MessageInformation::MessageInformation(QString recipient, QString autor, ByteArray message, QDate date, QTime time)
 {
   this->recipient = recipient;
   this->autor = autor;
@@ -28,9 +29,19 @@ MessageInformation::MessageInformation(QDataStream &stream)
 {
   stream >> recipient;
   stream >> autor;
-  stream >> message;
   stream >> date;
   stream >> time;
+
+  uint rb = 0;
+  char *buffer;
+  stream.readBytes(buffer, rb);
+
+  qDebug() << "ENCRP_SIZE" << rb;
+
+  message = ByteArray(rb);
+  for (int i = 0; i < rb; i ++) {
+      message[i] = buffer[i];
+    }
 }
 
 QString MessageInformation::getAutor() const
@@ -43,14 +54,14 @@ void MessageInformation::setAutor(const QString &value)
   autor = value;
 }
 
-QString MessageInformation::getMessage() const
+ByteArray MessageInformation::getMessage() const
 {
   return message;
 }
 
-void MessageInformation::setMessage(const QString &value)
+void MessageInformation::setMessage(ByteArray &arr)
 {
-  message = value;
+  message = arr;
 }
 
 QDate MessageInformation::getDate() const
@@ -77,7 +88,7 @@ void MessageInformation::saveToStream(QDataStream &stream)
 {
   stream << recipient;
   stream << autor;
-  stream << message;
   stream << date;
   stream << time;
+  stream.writeBytes((const char*)message.data(), message.size());
 }

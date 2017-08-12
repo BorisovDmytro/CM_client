@@ -5,24 +5,26 @@
 #include <QDate>
 #include <QTime>
 #include <QDataStream>
+#include <aes/aes256.hpp>
+
 
 class MessageInformation
 {
 protected:
   QString recipient;
   QString autor;
-  QString message;
+  ByteArray message;
   QDate date;
   QTime time;
 public:
   MessageInformation();
-  MessageInformation(QString recipient, QString autor, QString message, QDate date, QTime time);
+  MessageInformation(QString recipient, QString autor, ByteArray message, QDate date, QTime time);
   MessageInformation(QDataStream &stream);
 
   QString getAutor() const;
   void setAutor(const QString &value);
-  QString getMessage() const;
-  void setMessage(const QString &value);
+  ByteArray getMessage() const;
+  void setMessage(ByteArray &arr);
   QDate getDate() const;
   void setDate(const QDate &value);
   QTime getTime() const;

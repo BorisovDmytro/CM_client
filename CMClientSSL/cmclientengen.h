@@ -31,7 +31,11 @@ private:
   quint64 mLastVoiceFrameIndex;
   quint64 mExpectedVoiceFrameIndex;
   quint16 m_nNextBlockSize;
-  DiffHelmanProtocol mKey;
+  DiffHelmanProtocol mDiffHelman;
+  std::vector<unsigned char> mKey;
+
+  DiffHelmanProtocol mDiffHelmanAuth;
+  std::vector<unsigned char> mKeyAuth;
   void playAudio(const char* data, int size);
 public:
   enum MessageType {

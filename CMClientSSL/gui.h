@@ -15,7 +15,23 @@ enum PagesGUI {
   OPTIONS_PAGE
 };
 
-typedef QList<MessageInformation>* StoragePtr;
+struct MessageData {
+  QString recipient;
+  QString autor;
+  QString message;
+  QDate date;
+  QTime time;
+
+  MessageData(QString recipient, QString autor, QString message, QDate date, QTime time) {
+    this->recipient = recipient;
+    this->autor = autor;
+    this->message = message;
+    this->date = date;
+    this->time = time;
+  }
+};
+
+typedef QList<MessageData>* StoragePtr;
 typedef QMap<QString, StoragePtr>  History;
 
 class GUI : public QMainWindow

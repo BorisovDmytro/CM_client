@@ -100,7 +100,7 @@ void MainWindow::onLoadUserList(QStringList list)
 
 void MainWindow::onNewMessage(MessageInformation msg)
 {
-  if (msg.getAutor() == currentUser) {
+/*  if (msg.getAutor() == currentUser) {
     ui->textEdit->append(msg.getMessage());
   }
 
@@ -110,7 +110,7 @@ void MainWindow::onNewMessage(MessageInformation msg)
     history.insert(msg.getAutor(), list);
   }
   QStringList* listHis = history.value(msg.getAutor());
-  listHis->append(msg.getMessage());
+  listHis->append(msg.getMessage());*/
 }
 
 void MainWindow::on_listWidget_itemClicked(QListWidgetItem *item)

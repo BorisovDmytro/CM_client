@@ -100,7 +100,7 @@ void GUI::onLaodAccounts(QStringList list)
   ui->listWidget->clear();
   qDebug () << "load accounts : " << list;
   foreach (auto var, list) {
-      history.insert(var, new QList<MessageInformation>());
+      history.insert(var, new QList<MessageData>());
       ui->listWidget->addItem(var);
     }
 }
@@ -110,7 +110,11 @@ void GUI::onNewMessage(QString recipient, QString autor, QString message, QStrin
 {
   StoragePtr storage = history.value(autor, NULL);
   if (storage) {
-      storage->append(MessageInformation(recipient, autor, message, QDate::fromString(date), QTime::fromString(time)));
+      storage->append(MessageData(recipient, autor, message, QDate::fromString(date), QTime::fromString(time)));
+    }
+
+  if (selectedUser == autor) {
+      ui->textEdit->append(message);
     }
 }
 
@@ -176,8 +180,8 @@ void GUI::on_listWidget_itemClicked(QListWidgetItem *item)
   StoragePtr storage = history.value(selectedUser, NULL);
 
   ui->textEdit->clear();
-  foreach (MessageInformation var, *storage) {
-      ui->textEdit->append(var.getMessage());
+  foreach (MessageData var, *storage) {
+      ui->textEdit->append(var.message);
     }
 }
 

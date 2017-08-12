@@ -5,6 +5,8 @@
 #include <QAudioDeviceInfo>
 #include "aes/aes256.hpp"
 
+#include <iostream>
+
 CMClientEngene::CMClientEngene(QObject *parent) : QObject(parent)
 {
   initialize();
@@ -67,7 +69,7 @@ void CMClientEngene::successCall()
   out << quint16(0);
 
   out << (int) SuccessCall;
-  out << (qint64)mKey.getPrivate();
+  out << (qint64)mDiffHelman.getPrivate();
 
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
@@ -101,11 +103,11 @@ void CMClientEngene::startCall(const QString &recipient)
   out << (int) StartCall;
   out << recipient;
 
-  mKey = DiffHelmanProtocol(true);
+  mDiffHelman = DiffHelmanProtocol(true);
 
-  out << (qint64)mKey.getGenerator(); // long
-  out << (qint64)mKey.getModule(); // long
-  out << (qint64)mKey.getPrivate(); // long
+  out << mDiffHelman.getGenerator(); // long
+  out << mDiffHelman.getModule(); // long
+  out << mDiffHelman.getPrivate(); // long
 
   sendData(arr);
 }
@@ -133,7 +135,6 @@ void CMClientEngene::connectToHost(QString host, int port)
 
   qDebug() << "connect to server at: " << host  << " : "<< port;
   mSocket = new QWebSocket();
-
 
   connect(mSocket, SIGNAL(connected()),
           this, SLOT(connected()));
@@ -202,12 +203,10 @@ void CMClientEngene::readCallFrame(QDataStream &stream)
 
   if (mExpectedVoiceFrameIndex <= voiceFrameIndex) {
       stream.readBytes(data, lengthRead);
-
-      std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-                                           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };
-
+      /*std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+                                           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };*/
       ByteArray dec;
-      Aes256::decrypt(key, (unsigned char*) data, lengthRead, dec);
+      Aes256::decrypt(mKey, (unsigned char*) data, lengthRead, dec);
 
       if (lengthRead > 0)
         playAudio((const char *)dec.data(), dec.size());
@@ -224,10 +223,8 @@ void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
   if (count == 0)
     return;
 
-  std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-                                       0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };
-
-
+ /*std::vector<unsigned char> key = { 0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+                                       0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7, 0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4 };*/
   QByteArray  arr;
   QDataStream out(&arr, QIODevice::WriteOnly);
   out.setVersion(QT_Version);
@@ -239,7 +236,7 @@ void CMClientEngene::audioBufferProbed(const QAudioBuffer& buffer)
   out << count;
 
   ByteArray enc;
-  Aes256::encrypt(key, (unsigned char*)buffer.data(), count, enc);
+  Aes256::encrypt(mKey, (unsigned char*)buffer.data(), count, enc);
 
   out.writeBytes((const char*)enc.data(), enc.size());
   out.device()->seek(0);
@@ -275,6 +272,26 @@ void CMClientEngene::readyRead(QByteArray in)
           qDebug() << "Auth resualt :" << isSuccess;
           if (!isSuccess)
             delete mAccount;
+          else {
+              qint64 pub = 0;
+              stream >> pub;
+              mDiffHelmanAuth.setPublic(pub);
+              qint64 tmpKey = mDiffHelmanAuth.getKey();
+              qDebug() << "Auth key:" << tmpKey;
+
+              std::string strKey = QString::number(tmpKey).toStdString();
+
+              std::vector<unsigned char> keyArr(32);
+              for (int i = 0; i < 32; i++) {
+                  if (strKey.size() > i) {
+                      keyArr.push_back(strKey.at(i));
+                    } else {
+                      keyArr.push_back(0xff);
+                    }
+                }
+
+              mKeyAuth = keyArr;
+            }
 
           emit authResualt(isSuccess);
         } break;
@@ -294,10 +311,20 @@ void CMClientEngene::readyRead(QByteArray in)
         } break;
       case TextMessage: {
           MessageInformation msg(stream);
+
+          //Aes256::encrypt(mKey, (unsigned char*)buffer.data(), count, enc);
+
+          ByteArray enc = msg.getMessage();
+          ByteArray dec;
+          Aes256::decrypt(mKeyAuth, enc, dec);
+
+          std::string str((const char*)dec.data(), dec.size());
+          QString decText(str.c_str());
+          qDebug() << "DEC_TEXT:" << decText;
           //QString recipient, QString autor, QString message, QDate date, QTime time
           emit newTextMessage(msg.getRecipient(),
                               msg.getAutor(),
-                              msg.getMessage(),
+                              decText,
                               msg.getDate().toString("dd.MM.yyyy"),
                               msg.getTime().toString("hh:mm:ss"));
         } break;
@@ -312,11 +339,25 @@ void CMClientEngene::readyRead(QByteArray in)
           stream >> mod;
           stream >> priv;
 
-          mKey = DiffHelmanProtocol(false);
-          mKey.set(gen, mod);
-          mKey.setPublic(priv);
+          mDiffHelman = DiffHelmanProtocol(false);
+          mDiffHelman.set(gen, mod);
+          mDiffHelman.setPublic(priv);
 
-          qDebug() << "StartCall call: " << mKey.getKey();
+          qDebug() << "StartCall call: " << mDiffHelman.getKey();
+
+          std::string strKey = QString::number(mDiffHelman.getKey()).toStdString();
+
+          std::vector<unsigned char> key(32);
+          for (int i = 0; i < 32; i++) {
+              if (strKey.size() > i) {
+                  key.push_back(strKey.at(i));
+                } else {
+                  key.push_back(0xff);
+                }
+            }
+
+          mKey = key;
+
           emit signalStartCall(fromName);
         } break;
       case SuccessCall: {
@@ -325,8 +366,22 @@ void CMClientEngene::readyRead(QByteArray in)
           stream >> fromName;
           stream >> priv;
 
-          mKey.setPublic(priv);
-          qDebug() << "success call: " << mKey.getKey();
+          mDiffHelman.setPublic(priv);
+          qDebug() << "success call: " << mDiffHelman.getKey();
+
+          std::string strKey = QString::number(mDiffHelman.getKey()).toStdString();
+
+          std::vector<unsigned char> key(32);
+          for (int i = 0; i < 32; i++) {
+              if (strKey.size() > i) {
+                  key.push_back(strKey.at(i));
+                } else {
+                  key.push_back(0xff);
+                }
+            }
+
+          mKey = key;
+
           mLastVoiceFrameIndex     = 0;
           mExpectedVoiceFrameIndex = 0;
           mAudioRecord->record();
@@ -368,6 +423,8 @@ void CMClientEngene::sslErrors(QList<QSslError> errs)
 
 void CMClientEngene::auth(const QString &strName, const QString &strPassword)
 {
+  mDiffHelmanAuth = DiffHelmanProtocol(true);
+
   QByteArray  arr;
   QDataStream out(&arr, QIODevice::WriteOnly);
   out.setVersion(QT_Version);
@@ -378,11 +435,14 @@ void CMClientEngene::auth(const QString &strName, const QString &strPassword)
   out << strName;
   out << strPassword;
 
+  out << mDiffHelmanAuth.getGenerator(); // long
+  out << mDiffHelmanAuth.getModule();    // long
+  out << mDiffHelmanAuth.getPrivate();   // long
+
   out.device()->seek(0);
   out << quint16(arr.size() - sizeof(quint16));
 
   mAccount = new Account(strName, strPassword);
-  // mSocket->write(arrBlock);
   sendData(arr);
 }
 
@@ -395,7 +455,12 @@ void CMClientEngene::sendMessage(const QString &recipient, const QString &text)
   QTime time = QTime::currentTime();
 
   if (mAccount) {
-      MessageInformation msg(recipient, mAccount->name(), text, date, time);
+      ByteArray encr;
+      Aes256::encrypt(mKeyAuth, (unsigned char*)text.toStdString().c_str(), text.toStdString().size(), encr);
+
+      qDebug() << "ENCSIZE:" << encr.size();
+
+      MessageInformation msg(recipient, mAccount->name(), encr, date, time);
       out << quint16(0);
 
       out << (int) MessageType::TextMessage;
